@@ -5,6 +5,10 @@ import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.Locale;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,8 +45,11 @@ public class MainActivity extends AppCompatActivity {
             // If done selecting dots then replace selected dots and display new moves and score
             if (selectionStatus == DotsGrid.DotSelectionStatus.Last) {
                 if (mGame.getSelectedDots().size() > 1) {
-                    mGame.finishMove();
-                    updateMovesAndScore();
+                    mDotsGrid.animateDots();
+
+                    // These methods must be called AFTER the animation completes
+                    //mGame.finishMove();
+                    //updateMovesAndScore();
                 }
                 else {
                     mGame.clearSelectedDots();
@@ -52,10 +59,35 @@ public class MainActivity extends AppCompatActivity {
             // Display changes to the game
             mDotsGrid.invalidate();
         }
+
+        @Override
+        public void onAnimationFinished() {
+            mGame.finishMove();
+            mDotsGrid.invalidate();
+            updateMovesAndScore();
+        }
     };
 
     public void newGameClick(View view) {
-        startNewGame();
+        // Animate down off screen
+        int screenHeight = this.getWindow().getDecorView().getHeight();
+        ObjectAnimator moveBoardOff = ObjectAnimator.ofFloat(mDotsGrid,
+                "translationY", screenHeight);
+        moveBoardOff.setDuration(700);
+        moveBoardOff.start();
+
+        moveBoardOff.addListener(new AnimatorListenerAdapter() {
+            public void onAnimationEnd(Animator animation) {
+                startNewGame();
+
+                // Animate from above the screen down to default location
+                ObjectAnimator moveBoardOn = ObjectAnimator.ofFloat(mDotsGrid,
+                        "translationY", -screenHeight, 0);
+                moveBoardOn.setDuration(700);
+                moveBoardOn.start();
+            }
+        });
+
     }
 
     private void startNewGame() {
